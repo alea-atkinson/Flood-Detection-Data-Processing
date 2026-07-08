@@ -1,0 +1,8 @@
+DATA PROCESSING STEPS
+
+1. Make these 3 directories in the root: raw_files, filtered_files, 20m_files
+2. Download raw data from spreadsheet download link (choose pauli tif from nasa website)
+3. Place inside the raw_files folder
+4. Run lee_filter.py. Arguments: source path to raw file and dst path to filtered_files/file_name
+5. Run change_resolution.py. Arguments: source path to filtered file and dst path to 20m_files/file_name
+6. Run tile.py. Arguments: source path to 20m file and dst path to FOLDER where tiles will reside (make a new folder in tiles corresponsing to the flight path name)
