@@ -307,6 +307,70 @@ def load_pretrained_encoder_decoder(seg_model: nn.Module, checkpoint_path: str) 
     if unexpected:
         print(f"Unexpected keys ignored: {unexpected}")
 
+import matplotlib.pyplot as plt
+from pathlib import Path
+
+def display_rgb(img):
+    img = img.copy()
+    img -= img.min()
+    img /= img.max() + 1e-8
+
+    return img
+
+def visualize_reconstruction(
+    masked_input,
+    target,
+    prediction,
+    loss_mask,
+    save_path=None,
+):
+    """
+    masked_input : (3,H,W)
+    target       : (3,H,W)
+    prediction   : (3,H,W)
+    loss_mask    : (1,H,W)
+    """
+
+    masked_input = masked_input.cpu().numpy()
+    target = target.cpu().numpy()
+    prediction = prediction.detach().cpu().numpy()
+    loss_mask = loss_mask.cpu().numpy()[0]
+
+    # Use first three channels as RGB
+    inp = np.moveaxis(masked_input, 0, -1)
+    tgt = np.moveaxis(target, 0, -1)
+    pred = np.moveaxis(prediction, 0, -1)
+
+    error = np.mean(np.abs(pred - tgt), axis=-1)
+
+    fig, ax = plt.subplots(1, 5, figsize=(22, 5))
+
+
+    ax[0].imshow(display_rgb(tgt))
+    ax[0].set_title("Original")
+
+    ax[1].imshow(display_rgb(inp))
+    ax[1].set_title("Masked Input")
+
+    ax[2].imshow(display_rgb(pred))
+    ax[2].set_title("Reconstruction")
+
+    ax[3].imshow(error, cmap="gray")
+    ax[3].set_title("Absolute Error")
+
+    ax[4].imshow(loss_mask, cmap="gray")
+    ax[4].set_title("Masked Pixels")
+
+    for a in ax:
+        a.axis("off")
+
+    plt.tight_layout()
+
+    if save_path is not None:
+        plt.savefig(save_path, dpi=200)
+
+    plt.close()
+
 
 # ---------------------------------------------------------------------------
 # Training loop
@@ -386,6 +450,14 @@ def train(args: argparse.Namespace) -> None:
                 {"model_state_dict": model.state_dict(), "epoch": epoch, "val_loss": val_loss},
                 out_dir / "best_mae.pth",
             )
+        if epoch % 5 == 0:
+            visualize_reconstruction(
+                masked_sar[0],
+                target_sar[0],
+                pred[0],
+                loss_mask[0],
+                f"training/visuals/reconstruction_epoch_{epoch:03d}.png",
+            )
 
     print(f"Done. Best val loss: {best_val_loss:.5f}. Checkpoint: {out_dir / 'best_mae.pth'}")
 
@@ -399,7 +471,7 @@ def build_arg_parser() -> argparse.ArgumentParser:
     parser.add_argument("--mask_ratio", type=float, default=0.5)
     parser.add_argument("--base_channels", type=int, default=32)
     parser.add_argument("--batch_size", type=int, default=16)
-    parser.add_argument("--epochs", type=int, default=20)
+    parser.add_argument("--epochs", type=int, default=80)
     parser.add_argument("--lr", type=float, default=1e-4)
     parser.add_argument("--num_workers", type=int, default=2)
     return parser
