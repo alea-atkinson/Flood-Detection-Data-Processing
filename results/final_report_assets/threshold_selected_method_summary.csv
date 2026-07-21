@@ -1,0 +1,7 @@
+Method,Mean Dice,Mean IoU,Mean Precision,Mean Recall,Mean Accuracy,Fold Dice Wins
+Random,0.5832,0.4133,0.6013,0.5823,0.8163,2/7
+MAE,0.5766,0.4077,0.6239,0.5565,0.8232,0/7
+Original Contrastive,0.5680,0.4012,0.5674,0.6102,0.7940,0/7
+Denoising,0.5535,0.3862,0.5813,0.5726,0.7988,0/7
+Weak SimSiam,0.5960,0.4280,0.6520,0.5629,0.8347,5/7
+Hybrid MAE + SimSiam,0.5598,0.3919,0.5978,0.5829,0.8008,0/7

@@ -1,0 +1,8 @@
+Held-out Flight Path,Best Method,Best Dice,Random Dice,Weak SimSiam Dice,Weak SimSiam - Random,Weak SimSiam vs Random
+fp1,Random,0.5452,0.5452,0.5127,-0.0325,Loss
+fp2,Weak SimSiam,0.7084,0.6422,0.7084,+0.0662,Win
+fp3,Weak SimSiam,0.6385,0.6201,0.6385,+0.0184,Win
+fp4,Weak SimSiam,0.6049,0.5780,0.6049,+0.0269,Win
+fp5,Weak SimSiam,0.6493,0.6117,0.6493,+0.0376,Win
+fp6,Random,0.5976,0.5976,0.5474,-0.0502,Loss
+fp7,Weak SimSiam,0.5109,0.4879,0.5109,+0.0229,Win
