@@ -4,3 +4,33 @@
 
 __pycache__/
 *.pyc
+
+# Logs
+logs/
+*.log
+
+# Model checkpoints
+models/
+*.pt
+*.pth
+training/pretrain_weights/
+
+# Seed replication generated outputs
+seed_replication/logs/
+seed_replication/models/
+seed_replication/raw_results/
+
+# Python cache
+__pycache__/
+*.py[cod]
+
+# Raw experiment CSV outputs
+results/*_metrics.csv
+results/*_test_metrics.csv
+results/*_threshold_sweep.csv
+results/*_pretrain_metrics.csv
+
+# Keep final/report-ready assets trackable by not ignoring:
+# results/final_report_assets/
+# results/*summary*.csv
+# results/lofo_fold_difficulty_summary.csv

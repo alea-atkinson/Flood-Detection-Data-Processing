@@ -60,7 +60,6 @@ options:
                                   unfreezing (default: 0, meaning no freezing)
   --encoder-lr-scale F            Multiplier applied to --learning-rate for encoder
                                   params once unfrozen (default: 1.0)
-  --threshold F                   Probability threshold for binary prediction (default: 0.5)
 
 Default split:
   training/fine_tune_csvs/train.csv
@@ -267,62 +266,20 @@ def set_encoder_frozen(model: nn.Module, frozen: bool) -> None:
             param.requires_grad = not frozen
 
 
-def confusion_counts_from_logits(
-    logits: torch.Tensor,
-    targets: torch.Tensor,
-    threshold: float = 0.5,
-) -> dict[str, int]:
-    """Return TP/FP/FN/TN counts for a batch.
-
-    Counts are accumulated over pixels. Metrics such as Dice and IoU should
-    be computed once from counts accumulated across the full split, not by
-    averaging per-batch Dice/IoU values.
-    """
+def dice_iou_from_logits(logits: torch.Tensor, targets: torch.Tensor, threshold: float = 0.5) -> tuple[float, float]:
     probs = torch.sigmoid(logits)
     preds = probs > threshold
     targets_bool = targets > 0.5
 
-    tp = (preds & targets_bool).sum().item()
-    fp = (preds & ~targets_bool).sum().item()
-    fn = (~preds & targets_bool).sum().item()
-    tn = (~preds & ~targets_bool).sum().item()
+    intersection = (preds & targets_bool).sum().float()
+    pred_sum = preds.sum().float()
+    target_sum = targets_bool.sum().float()
+    union = (preds | targets_bool).sum().float()
 
-    return {
-        "tp": int(tp),
-        "fp": int(fp),
-        "fn": int(fn),
-        "tn": int(tn),
-    }
-
-
-def metrics_from_counts(
-    loss: float,
-    tp: int,
-    fp: int,
-    fn: int,
-    tn: int,
-) -> dict[str, float | int]:
-    """Compute global segmentation metrics from accumulated pixel counts."""
-    eps = 1e-7
-
-    dice = (2.0 * tp + eps) / (2.0 * tp + fp + fn + eps)
-    iou = (tp + eps) / (tp + fp + fn + eps)
-    precision = (tp + eps) / (tp + fp + eps)
-    recall = (tp + eps) / (tp + fn + eps)
-    accuracy = (tp + tn + eps) / (tp + fp + fn + tn + eps)
-
-    return {
-        "loss": loss,
-        "dice": dice,
-        "iou": iou,
-        "precision": precision,
-        "recall": recall,
-        "accuracy": accuracy,
-        "tp": tp,
-        "fp": fp,
-        "fn": fn,
-        "tn": tn,
-    }
+    eps = torch.tensor(1e-7, device=logits.device)
+    dice = (2.0 * intersection + eps) / (pred_sum + target_sum + eps)
+    iou = (intersection + eps) / (union + eps)
+    return float(dice.item()), float(iou.item())
 
 
 #CUSTOM LOSS FUNCTIONS 
@@ -430,17 +387,14 @@ def run_epoch(
     loss_fn: nn.Module,
     device: torch.device,
     optimizer: torch.optim.Optimizer | None = None,
-    threshold: float = 0.5,
-) -> dict[str, float | int]:
+) -> dict[str, float]:
     is_train = optimizer is not None
     model.train(is_train)
 
     total_loss = 0.0
+    total_dice = 0.0
+    total_iou = 0.0
     total_batches = 0
-    tp = 0
-    fp = 0
-    fn = 0
-    tn = 0
 
     for images, masks in loader:
         images = images.to(device, non_blocking=True)
@@ -454,93 +408,29 @@ def run_epoch(
                 loss.backward()
                 optimizer.step()
 
-        counts = confusion_counts_from_logits(
-            logits.detach(),
-            masks,
-            threshold=threshold,
-        )
-        tp += counts["tp"]
-        fp += counts["fp"]
-        fn += counts["fn"]
-        tn += counts["tn"]
-
+        dice, iou = dice_iou_from_logits(logits.detach(), masks)
         total_loss += float(loss.item())
+        total_dice += dice
+        total_iou += iou
         total_batches += 1
 
     if total_batches == 0:
         raise ValueError("DataLoader produced no batches.")
 
-    avg_loss = total_loss / total_batches
-    return metrics_from_counts(
-        loss=avg_loss,
-        tp=tp,
-        fp=fp,
-        fn=fn,
-        tn=tn,
-    )
+    return {
+        "loss": total_loss / total_batches,
+        "dice": total_dice / total_batches,
+        "iou": total_iou / total_batches,
+    }
 
 
 def write_metrics_csv(metrics_path: Path, rows: list[dict[str, float | int]]) -> None:
     metrics_path.parent.mkdir(parents=True, exist_ok=True)
     with metrics_path.open("w", newline="", encoding="utf-8") as handle:
-        fieldnames = [
-            "epoch",
-            "train_loss",
-            "train_dice",
-            "train_iou",
-            "train_precision",
-            "train_recall",
-            "train_accuracy",
-            "train_tp",
-            "train_fp",
-            "train_fn",
-            "train_tn",
-            "val_loss",
-            "val_dice",
-            "val_iou",
-            "val_precision",
-            "val_recall",
-            "val_accuracy",
-            "val_tp",
-            "val_fp",
-            "val_fn",
-            "val_tn",
-            "encoder_frozen",
-        ]
+        fieldnames = ["epoch", "train_loss", "train_dice", "train_iou", "val_loss", "val_dice", "val_iou", "encoder_frozen"]
         writer = csv.DictWriter(handle, fieldnames=fieldnames)
         writer.writeheader()
         writer.writerows(rows)
-
-
-def write_test_metrics_csv(
-    test_metrics_path: Path,
-    row: dict[str, float | int | str],
-) -> None:
-    test_metrics_path.parent.mkdir(parents=True, exist_ok=True)
-    with test_metrics_path.open("w", newline="", encoding="utf-8") as handle:
-        fieldnames = [
-            "run_name",
-            "train_csv",
-            "val_csv",
-            "test_csv",
-            "pretrained_checkpoint",
-            "best_epoch",
-            "best_val_loss",
-            "threshold",
-            "test_loss",
-            "test_dice",
-            "test_iou",
-            "test_precision",
-            "test_recall",
-            "test_accuracy",
-            "test_tp",
-            "test_fp",
-            "test_fn",
-            "test_tn",
-        ]
-        writer = csv.DictWriter(handle, fieldnames=fieldnames)
-        writer.writeheader()
-        writer.writerow(row)
 
 
 def parse_args() -> argparse.Namespace:
@@ -571,12 +461,6 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument(
         "--encoder-lr-scale", type=float, default=1.0,
         help="Multiplier applied to --learning-rate for encoder/bottleneck params (once unfrozen).",
-    )
-    parser.add_argument(
-        "--threshold",
-        type=float,
-        default=0.5,
-        help="Probability threshold used to convert sigmoid outputs into binary predictions.",
     )
     return parser.parse_args()
 
@@ -664,10 +548,8 @@ def main() -> None:
     args.models_dir.mkdir(parents=True, exist_ok=True)
     checkpoint_path = args.models_dir / f"{args.run_name}_best.pt"
     metrics_path = args.results_dir / f"{args.run_name}_metrics.csv"
-    test_metrics_path = args.results_dir / f"{args.run_name}_test_metrics.csv"
 
     best_val_loss = float("inf")
-    best_epoch = -1
     history: list[dict[str, float | int]] = []
 
     for epoch in range(1, args.epochs + 1):
@@ -685,44 +567,17 @@ def main() -> None:
             and epoch <= args.freeze_epochs
         )
 
-        train_metrics = run_epoch(
-            model,
-            train_loader,
-            loss_fn,
-            device,
-            optimizer,
-            threshold=args.threshold,
-        )
-        val_metrics = run_epoch(
-            model,
-            val_loader,
-            loss_fn,
-            device,
-            threshold=args.threshold,
-        )
+        train_metrics = run_epoch(model, train_loader, loss_fn, device, optimizer)
+        val_metrics = run_epoch(model, val_loader, loss_fn, device)
 
         row = {
             "epoch": epoch,
             "train_loss": train_metrics["loss"],
             "train_dice": train_metrics["dice"],
             "train_iou": train_metrics["iou"],
-            "train_precision": train_metrics["precision"],
-            "train_recall": train_metrics["recall"],
-            "train_accuracy": train_metrics["accuracy"],
-            "train_tp": train_metrics["tp"],
-            "train_fp": train_metrics["fp"],
-            "train_fn": train_metrics["fn"],
-            "train_tn": train_metrics["tn"],
             "val_loss": val_metrics["loss"],
             "val_dice": val_metrics["dice"],
             "val_iou": val_metrics["iou"],
-            "val_precision": val_metrics["precision"],
-            "val_recall": val_metrics["recall"],
-            "val_accuracy": val_metrics["accuracy"],
-            "val_tp": val_metrics["tp"],
-            "val_fp": val_metrics["fp"],
-            "val_fn": val_metrics["fn"],
-            "val_tn": val_metrics["tn"],
             "encoder_frozen": int(encoder_frozen),
         }
         history.append(row)
@@ -738,8 +593,7 @@ def main() -> None:
         )
 
         if val_metrics["loss"] < best_val_loss:
-            best_val_loss = float(val_metrics["loss"])
-            best_epoch = epoch
+            best_val_loss = val_metrics["loss"]
             torch.save(
                 {
                     "epoch": epoch,
@@ -758,57 +612,14 @@ def main() -> None:
     weights_only=False
     )
     model.load_state_dict(checkpoint["model_state_dict"])
-    best_epoch = int(checkpoint.get("epoch", best_epoch))
-    best_val_loss = float(checkpoint.get("best_val_loss", best_val_loss))
-
-    test_metrics = run_epoch(
-        model,
-        test_loader,
-        loss_fn,
-        device,
-        threshold=args.threshold,
-    )
-
-    test_row = {
-        "run_name": args.run_name,
-        "train_csv": args.train_csv.as_posix(),
-        "val_csv": args.val_csv.as_posix(),
-        "test_csv": args.test_csv.as_posix(),
-        "pretrained_checkpoint": (
-            args.pretrained_checkpoint.as_posix()
-            if args.pretrained_checkpoint is not None
-            else ""
-        ),
-        "best_epoch": best_epoch,
-        "best_val_loss": best_val_loss,
-        "threshold": args.threshold,
-        "test_loss": test_metrics["loss"],
-        "test_dice": test_metrics["dice"],
-        "test_iou": test_metrics["iou"],
-        "test_precision": test_metrics["precision"],
-        "test_recall": test_metrics["recall"],
-        "test_accuracy": test_metrics["accuracy"],
-        "test_tp": test_metrics["tp"],
-        "test_fp": test_metrics["fp"],
-        "test_fn": test_metrics["fn"],
-        "test_tn": test_metrics["tn"],
-    }
-    write_test_metrics_csv(test_metrics_path, test_row)
-
+    test_metrics = run_epoch(model, test_loader, loss_fn, device)
     print(
         "Best checkpoint test metrics: "
         f"loss={test_metrics['loss']:.4f} "
         f"dice={test_metrics['dice']:.4f} "
-        f"iou={test_metrics['iou']:.4f} "
-        f"precision={test_metrics['precision']:.4f} "
-        f"recall={test_metrics['recall']:.4f} "
-        f"tp={test_metrics['tp']} "
-        f"fp={test_metrics['fp']} "
-        f"fn={test_metrics['fn']} "
-        f"tn={test_metrics['tn']}"
+        f"iou={test_metrics['iou']:.4f}"
     )
-    print(f"Training metrics CSV: {metrics_path}")
-    print(f"Test metrics CSV: {test_metrics_path}")
+    print(f"Metrics CSV: {metrics_path}")
 
 
 if __name__ == "__main__":
