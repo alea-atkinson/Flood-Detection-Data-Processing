@@ -24,6 +24,7 @@ from __future__ import annotations
 
 import argparse
 import csv
+from html import parser
 import importlib.util
 import random
 import sys
@@ -31,6 +32,9 @@ from pathlib import Path
 
 import numpy as np
 
+from collections import Counter
+
+import re
 
 def print_basic_help() -> None:
     """Show help even before optional training packages are installed."""
@@ -91,7 +95,7 @@ import rasterio  # noqa: E402
 import torch  # noqa: E402
 import torch.nn as nn  # noqa: E402
 import torch.nn.functional as F  # noqa: E402
-from torch.utils.data import DataLoader, Dataset  # noqa: E402
+from torch.utils.data import DataLoader, Dataset, WeightedRandomSampler
 
 
 class FloodTileDataset(Dataset):
@@ -174,6 +178,97 @@ class FloodTileDataset(Dataset):
  
         return sar.astype(np.float32)
 
+def extract_source_fp_from_row(row: dict[str, str]) -> str:
+    text = f"{row.get('uavsar_path', '')} {row.get('flood_mask_path', '')}".lower()
+    match = re.search(r"(?<![a-z0-9])fp([1-7])(?![a-z0-9])", text)
+    if match:
+        return f"fp{match.group(1)}"
+    raise ValueError(f"Could not extract source flight path from row: {row}")
+
+
+def assign_flood_bin_from_fraction(frac: float) -> str:
+    if frac < 0.01:
+        return "0-1%"
+    if frac < 0.05:
+        return "1-5%"
+    if frac < 0.10:
+        return "5-10%"
+    if frac < 0.25:
+        return "10-25%"
+    if frac < 0.50:
+        return "25-50%"
+    return ">50%"
+
+
+def compute_flood_fraction_for_row(row: dict[str, str]) -> float:
+    sar_path = Path(row["uavsar_path"])
+    mask_path = Path(row["flood_mask_path"])
+
+    with rasterio.open(sar_path) as src:
+        sar = src.read(out_dtype="float32")[:3]
+
+    with rasterio.open(mask_path) as src:
+        mask = src.read(1, out_dtype="float32")
+
+    valid = ~(sar == 0).all(axis=0)
+    valid_pixels = int(valid.sum())
+
+    if valid_pixels == 0:
+        return 0.0
+
+    flood_pixels = int(((mask > 0) & valid).sum())
+    return flood_pixels / valid_pixels
+
+
+def make_balanced_sampler(
+    dataset: FloodTileDataset,
+    strategy: str,
+    max_weight_multiplier: float = 5.0,
+) -> WeightedRandomSampler | None:
+    if strategy == "standard":
+        return None
+
+    keys = []
+
+    for row in dataset.rows:
+        source_fp = extract_source_fp_from_row(row)
+
+        if strategy == "source_fp":
+            key = source_fp
+
+        elif strategy == "flood_bin":
+            flood_frac = compute_flood_fraction_for_row(row)
+            key = assign_flood_bin_from_fraction(flood_frac)
+
+        elif strategy == "source_fp_x_flood_bin":
+            flood_frac = compute_flood_fraction_for_row(row)
+            flood_bin = assign_flood_bin_from_fraction(flood_frac)
+            key = f"{source_fp}|{flood_bin}"
+
+        else:
+            raise ValueError(f"Unknown sampling strategy: {strategy}")
+
+        keys.append(key)
+
+    counts = Counter(keys)
+
+    raw_weights = np.array([1.0 / counts[key] for key in keys], dtype=np.float64)
+
+    # Clip extreme oversampling for tiny source_fp x flood_bin groups.
+    mean_weight = float(raw_weights.mean())
+    max_weight = mean_weight * max_weight_multiplier
+    clipped_weights = np.minimum(raw_weights, max_weight)
+
+    print(f"Sampling strategy: {strategy}")
+    print("Sampling groups:")
+    for key, count in sorted(counts.items()):
+        print(f"  {key}: {count}")
+
+    return WeightedRandomSampler(
+        weights=torch.as_tensor(clipped_weights, dtype=torch.double),
+        num_samples=len(clipped_weights),
+        replacement=True,
+    )
 
 class DoubleConv(nn.Module):
     def __init__(self, in_channels: int, out_channels: int) -> None:
@@ -578,6 +673,18 @@ def parse_args() -> argparse.Namespace:
         default=0.5,
         help="Probability threshold used to convert sigmoid outputs into binary predictions.",
     )
+    parser.add_argument(
+    "--sampling-strategy",
+    choices=["standard", "source_fp", "flood_bin", "source_fp_x_flood_bin"],
+    default="standard",
+    help="Training sampler strategy. Only affects the training DataLoader.",
+)
+    parser.add_argument(
+    "--sampler-max-weight-multiplier",
+    type=float,
+    default=5.0,
+    help="Clips sampler weights to mean_weight * this value to avoid extreme oversampling.",
+)
     return parser.parse_args()
 
 
@@ -606,10 +713,17 @@ def main() -> None:
     print(f"Dataset sizes: train={len(train_dataset)}, val={len(val_dataset)}, test={len(test_dataset)}")
 
     pin_memory = device.type == "cuda"
+    train_sampler = make_balanced_sampler(
+        train_dataset,
+        strategy=args.sampling_strategy,
+        max_weight_multiplier=args.sampler_max_weight_multiplier,
+    )
+
     train_loader = DataLoader(
         train_dataset,
         batch_size=args.batch_size,
-        shuffle=True,
+        shuffle=(train_sampler is None),
+        sampler=train_sampler,
         num_workers=args.num_workers,
         pin_memory=pin_memory,
     )
