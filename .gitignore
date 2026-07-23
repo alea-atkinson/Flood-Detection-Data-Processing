@@ -34,3 +34,8 @@ results/*_pretrain_metrics.csv
 # results/final_report_assets/
 # results/*summary*.csv
 # results/lofo_fold_difficulty_summary.csv
+
+# Domain/flood balancing generated outputs
+domain_balancing/logs/
+domain_balancing/models/
+domain_balancing/raw_results/
