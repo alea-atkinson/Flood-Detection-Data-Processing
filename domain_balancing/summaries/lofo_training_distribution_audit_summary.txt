@@ -1,0 +1,48 @@
+LOFPO Training Distribution Audit
+========================================
+
+Total audited training rows: 4715
+
+Rows with unknown source_fp: 0
+
+Training tile counts by held-out fold:
+  fp1: 741
+  fp2: 720
+  fp3: 648
+  fp4: 576
+  fp5: 665
+  fp6: 600
+  fp7: 765
+
+Source-flight-path imbalance by held-out fold:
+  fp1: min=86, max=144, max/min=1.67
+  fp2: min=94, max=142, max/min=1.51
+  fp3: min=77, max=140, max/min=1.82
+  fp4: min=59, max=127, max/min=2.15
+  fp5: min=76, max=143, max/min=1.88
+  fp6: min=83, max=129, max/min=1.55
+  fp7: min=106, max=141, max/min=1.33
+
+Flood-bin imbalance by held-out fold:
+  fp1: min=53, max=173, max/min=3.26
+  fp2: min=53, max=169, max/min=3.19
+  fp3: min=45, max=151, max/min=3.36
+  fp4: min=19, max=124, max/min=6.53
+  fp5: min=28, max=150, max/min=5.36
+  fp6: min=47, max=144, max/min=3.06
+  fp7: min=50, max=175, max/min=3.50
+
+Source_fp x flood_bin sparsity:
+  fp1: groups=36, groups_with_<5_tiles=2
+  fp2: groups=36, groups_with_<5_tiles=2
+  fp3: groups=35, groups_with_<5_tiles=1
+  fp4: groups=34, groups_with_<5_tiles=3
+  fp5: groups=36, groups_with_<5_tiles=2
+  fp6: groups=36, groups_with_<5_tiles=5
+  fp7: groups=36, groups_with_<5_tiles=2
+
+Interpretation guide:
+- If source_fp max/min ratio is high, source-domain-balanced sampling may be justified.
+- If flood-bin max/min ratio is high, flood-fraction-balanced sampling may be justified.
+- If many source_fp x flood_bin groups have <5 tiles, combined balancing may be too sparse or may need smoothing/clipping.
+- Do not train until unknown source_fp rows are resolved.
