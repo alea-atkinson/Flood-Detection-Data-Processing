@@ -24,7 +24,6 @@ from __future__ import annotations
 
 import argparse
 import csv
-from html import parser
 import importlib.util
 import random
 import sys
