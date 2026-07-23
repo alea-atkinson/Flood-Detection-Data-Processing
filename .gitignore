@@ -39,3 +39,4 @@ results/*_pretrain_metrics.csv
 domain_balancing/logs/
 domain_balancing/models/
 domain_balancing/raw_results/
+project_config/repo_snapshot_output.txt
