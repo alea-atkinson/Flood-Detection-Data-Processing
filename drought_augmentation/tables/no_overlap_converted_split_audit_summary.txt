@@ -1,0 +1,54 @@
+No-Overlap Converted Split Audit
+================================
+
+Repo root: /mnt/linuxlab/home/reuuzheng/Flood-Detection-Data-Processing
+Split root: /mnt/linuxlab/home/reuuzheng/Flood-Detection-Data-Processing/training/fine_tune_csvs/no_overlap_converted
+Deep raster inspection: False
+Number of split CSVs found: 35
+Total rows across split CSVs: 18429
+
+Rows by CSV:
+- held_out_fp1_test.csv: condition=florence_only; fold=fp1; split=test; 137 rows; Florence=137, Milton=0, Drought=0, Unknown=0; missing SAR=0, missing mask=0, duplicates=0, unique_pairs=137, duplicate_rate=0.000
+- held_out_fp1_train.csv: condition=florence_only; fold=fp1; split=train; 743 rows; Florence=743, Milton=0, Drought=0, Unknown=0; missing SAR=0, missing mask=0, duplicates=204, unique_pairs=539, duplicate_rate=0.275
+- held_out_fp1_val.csv: condition=florence_only; fold=fp1; split=val; 186 rows; Florence=186, Milton=0, Drought=0, Unknown=0; missing SAR=0, missing mask=0, duplicates=45, unique_pairs=141, duplicate_rate=0.242
+- held_out_fp2_test.csv: condition=florence_only; fold=fp2; split=test; 138 rows; Florence=138, Milton=0, Drought=0, Unknown=0; missing SAR=0, missing mask=0, duplicates=0, unique_pairs=138, duplicate_rate=0.000
+- held_out_fp2_train.csv: condition=florence_only; fold=fp2; split=train; 728 rows; Florence=728, Milton=0, Drought=0, Unknown=0; missing SAR=0, missing mask=0, duplicates=183, unique_pairs=545, duplicate_rate=0.251
+- held_out_fp2_val.csv: condition=florence_only; fold=fp2; split=val; 182 rows; Florence=182, Milton=0, Drought=0, Unknown=0; missing SAR=0, missing mask=0, duplicates=48, unique_pairs=134, duplicate_rate=0.264
+- held_out_fp3_test.csv: condition=florence_only; fold=fp3; split=test; 164 rows; Florence=164, Milton=0, Drought=0, Unknown=0; missing SAR=0, missing mask=0, duplicates=0, unique_pairs=164, duplicate_rate=0.000
+- held_out_fp3_train.csv: condition=florence_only; fold=fp3; split=train; 652 rows; Florence=652, Milton=0, Drought=0, Unknown=0; missing SAR=0, missing mask=0, duplicates=133, unique_pairs=519, duplicate_rate=0.204
+- held_out_fp3_val.csv: condition=florence_only; fold=fp3; split=val; 163 rows; Florence=163, Milton=0, Drought=0, Unknown=0; missing SAR=0, missing mask=0, duplicates=29, unique_pairs=134, duplicate_rate=0.178
+- held_out_fp4_test.csv: condition=florence_only; fold=fp4; split=test; 181 rows; Florence=181, Milton=0, Drought=0, Unknown=0; missing SAR=0, missing mask=0, duplicates=0, unique_pairs=181, duplicate_rate=0.000
+- held_out_fp4_train.csv: condition=florence_only; fold=fp4; split=train; 580 rows; Florence=580, Milton=0, Drought=0, Unknown=0; missing SAR=0, missing mask=0, duplicates=73, unique_pairs=507, duplicate_rate=0.126
+- held_out_fp4_val.csv: condition=florence_only; fold=fp4; split=val; 145 rows; Florence=145, Milton=0, Drought=0, Unknown=0; missing SAR=0, missing mask=0, duplicates=16, unique_pairs=129, duplicate_rate=0.110
+- held_out_fp5_test.csv: condition=florence_only; fold=fp5; split=test; 160 rows; Florence=160, Milton=0, Drought=0, Unknown=0; missing SAR=0, missing mask=0, duplicates=0, unique_pairs=160, duplicate_rate=0.000
+- held_out_fp5_train.csv: condition=florence_only; fold=fp5; split=train; 658 rows; Florence=658, Milton=0, Drought=0, Unknown=0; missing SAR=0, missing mask=0, duplicates=133, unique_pairs=525, duplicate_rate=0.202
+- held_out_fp5_val.csv: condition=florence_only; fold=fp5; split=val; 164 rows; Florence=164, Milton=0, Drought=0, Unknown=0; missing SAR=0, missing mask=0, duplicates=32, unique_pairs=132, duplicate_rate=0.195
+- held_out_fp6_test.csv: condition=florence_only; fold=fp6; split=test; 170 rows; Florence=170, Milton=0, Drought=0, Unknown=0; missing SAR=0, missing mask=0, duplicates=0, unique_pairs=170, duplicate_rate=0.000
+- held_out_fp6_train.csv: condition=florence_only; fold=fp6; split=train; 602 rows; Florence=602, Milton=0, Drought=0, Unknown=0; missing SAR=0, missing mask=0, duplicates=89, unique_pairs=513, duplicate_rate=0.148
+- held_out_fp6_val.csv: condition=florence_only; fold=fp6; split=val; 150 rows; Florence=150, Milton=0, Drought=0, Unknown=0; missing SAR=0, missing mask=0, duplicates=16, unique_pairs=134, duplicate_rate=0.107
+- held_out_fp7_test.csv: condition=florence_only; fold=fp7; split=test; 117 rows; Florence=117, Milton=0, Drought=0, Unknown=0; missing SAR=0, missing mask=0, duplicates=0, unique_pairs=117, duplicate_rate=0.000
+- held_out_fp7_train.csv: condition=florence_only; fold=fp7; split=train; 759 rows; Florence=759, Milton=0, Drought=0, Unknown=0; missing SAR=0, missing mask=0, duplicates=199, unique_pairs=560, duplicate_rate=0.262
+- held_out_fp7_val.csv: condition=florence_only; fold=fp7; split=val; 190 rows; Florence=190, Milton=0, Drought=0, Unknown=0; missing SAR=0, missing mask=0, duplicates=50, unique_pairs=140, duplicate_rate=0.263
+- with_milton/held_out_fp1_train.csv: condition=with_milton; fold=fp1; split=train; 1379 rows; Florence=761, Milton=618, Drought=0, Unknown=0; missing SAR=0, missing mask=0, duplicates=169, unique_pairs=1210, duplicate_rate=0.123
+- with_milton/held_out_fp1_val.csv: condition=with_milton; fold=fp1; split=val; 344 rows; Florence=168, Milton=176, Drought=0, Unknown=0; missing SAR=0, missing mask=0, duplicates=8, unique_pairs=336, duplicate_rate=0.023
+- with_milton/held_out_fp2_train.csv: condition=with_milton; fold=fp2; split=train; 1364 rows; Florence=739, Milton=625, Drought=0, Unknown=0; missing SAR=0, missing mask=0, duplicates=152, unique_pairs=1212, duplicate_rate=0.111
+- with_milton/held_out_fp2_val.csv: condition=with_milton; fold=fp2; split=val; 340 rows; Florence=171, Milton=169, Drought=0, Unknown=0; missing SAR=0, missing mask=0, duplicates=10, unique_pairs=330, duplicate_rate=0.029
+- with_milton/held_out_fp3_train.csv: condition=with_milton; fold=fp3; split=train; 1288 rows; Florence=654, Milton=634, Drought=0, Unknown=0; missing SAR=0, missing mask=0, duplicates=105, unique_pairs=1183, duplicate_rate=0.082
+- with_milton/held_out_fp3_val.csv: condition=with_milton; fold=fp3; split=val; 321 rows; Florence=161, Milton=160, Drought=0, Unknown=0; missing SAR=0, missing mask=0, duplicates=4, unique_pairs=317, duplicate_rate=0.012
+- with_milton/held_out_fp4_train.csv: condition=with_milton; fold=fp4; split=train; 1216 rows; Florence=588, Milton=628, Drought=0, Unknown=0; missing SAR=0, missing mask=0, duplicates=55, unique_pairs=1161, duplicate_rate=0.045
+- with_milton/held_out_fp4_val.csv: condition=with_milton; fold=fp4; split=val; 303 rows; Florence=137, Milton=166, Drought=0, Unknown=0; missing SAR=0, missing mask=0, duplicates=5, unique_pairs=298, duplicate_rate=0.017
+- with_milton/held_out_fp5_train.csv: condition=with_milton; fold=fp5; split=train; 1293 rows; Florence=654, Milton=639, Drought=0, Unknown=0; missing SAR=0, missing mask=0, duplicates=108, unique_pairs=1185, duplicate_rate=0.084
+- with_milton/held_out_fp5_val.csv: condition=with_milton; fold=fp5; split=val; 323 rows; Florence=168, Milton=155, Drought=0, Unknown=0; missing SAR=0, missing mask=0, duplicates=7, unique_pairs=316, duplicate_rate=0.022
+- with_milton/held_out_fp6_train.csv: condition=with_milton; fold=fp6; split=train; 1237 rows; Florence=606, Milton=631, Drought=0, Unknown=0; missing SAR=0, missing mask=0, duplicates=69, unique_pairs=1168, duplicate_rate=0.056
+- with_milton/held_out_fp6_val.csv: condition=with_milton; fold=fp6; split=val; 309 rows; Florence=146, Milton=163, Drought=0, Unknown=0; missing SAR=0, missing mask=0, duplicates=3, unique_pairs=306, duplicate_rate=0.010
+- with_milton/held_out_fp7_train.csv: condition=with_milton; fold=fp7; split=train; 1395 rows; Florence=767, Milton=628, Drought=0, Unknown=0; missing SAR=0, missing mask=0, duplicates=153, unique_pairs=1242, duplicate_rate=0.110
+- with_milton/held_out_fp7_val.csv: condition=with_milton; fold=fp7; split=val; 348 rows; Florence=182, Milton=166, Drought=0, Unknown=0; missing SAR=0, missing mask=0, duplicates=9, unique_pairs=339, duplicate_rate=0.026
+
+Condition totals:
+- florence_only: rows=6969, Florence=6969, Milton=0, Drought=0, Unknown=0
+- with_milton: rows=11460, Florence=5902, Milton=5558, Drought=0, Unknown=0
+
+Outputs:
+- drought_augmentation/tables/no_overlap_converted_split_audit_summary.csv
+- drought_augmentation/tables/no_overlap_converted_split_audit_rows.csv
+- drought_augmentation/tables/no_overlap_converted_split_audit_summary.txt
