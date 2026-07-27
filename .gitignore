@@ -18,3 +18,8 @@ training/pretrain_weights/
 
 # Generated repo snapshots
 project_config/repo_snapshot_output.txt
+
+# Drought augmentation generated outputs
+drought_augmentation/logs/
+drought_augmentation/raw_results/
+drought_augmentation/generated_masks/
