@@ -6,16 +6,15 @@ import pandas as pd
 # User settings
 # -------------------------------------------------
 
-train_image_dir = Path("2025_Tile_Data/Only_PNG_Data")
-train_mask_dir = Path("2025_Tile_Data/flood_change_mask_tiles")
+test_image_dir = Path("2025_Tile_Data/Only_PNG_Data")
 
-test_image_dir = Path("milton/tiles")
-test_mask_dir = Path("20m_files/Milton/masks")
+
+train_image_dir = Path("milton/tiles")
 
 validation_fraction = 0.20
 seed = 42
 
-output_dir = Path("training/fine_tune_csvs")
+output_dir = Path("training/fine_tune_csvs/train_milton")
 output_dir.mkdir(exist_ok=True)
 
 # -------------------------------------------------
@@ -26,9 +25,9 @@ train_records = []
 
 for i in range (1, 8):
     fp_dir = Path(f"{train_image_dir}/fp{i}")
-    uav_dir = Path(f"{fp_dir}/UAVSAR")
+    uav_dir = Path(f"{fp_dir}/uavsar")
     for image_path in sorted(uav_dir.glob("*.tif")):
-        mask_path = Path(f"{fp_dir}/flood_mask/{image_path.name}")
+        mask_path = Path(f"{fp_dir}/masks/{image_path.name}")
         if not mask_path.exists():
             print(f"Missing mask for {image_path.name}")
             continue
@@ -54,9 +53,9 @@ test_records = []
 
 for i in range (1, 8):
     fp_dir = Path(f"{test_image_dir}/fp{i}")
-    uav_dir = Path(f"{fp_dir}/uavsar")
+    uav_dir = Path(f"{fp_dir}/UAVSAR")
     for image_path in sorted(uav_dir.glob("*.tif")):
-        mask_path = Path(f"{fp_dir}/masks/{image_path.name}")
+        mask_path = Path(f"{fp_dir}/flood_mask/{image_path.name}")
         if not mask_path.exists():
             print(f"Missing mask for {image_path.name}")
             continue

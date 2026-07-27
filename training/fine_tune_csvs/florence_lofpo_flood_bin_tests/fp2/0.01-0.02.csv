@@ -1,0 +1,6 @@
+uavsar_path,flood_mask_path
+2025_Tile_Data/UAVSAR/tile_17_45.tif,2025_Tile_Data/flood_change_mask_tiles/tile_17_45.tif
+2025_Tile_Data/UAVSAR/tile_21_44.tif,2025_Tile_Data/flood_change_mask_tiles/tile_21_44.tif
+2025_Tile_Data/UAVSAR/tile_39_48.tif,2025_Tile_Data/flood_change_mask_tiles/tile_39_48.tif
+2025_Tile_Data/UAVSAR/tile_41_49.tif,2025_Tile_Data/flood_change_mask_tiles/tile_41_49.tif
+2025_Tile_Data/UAVSAR/tile_46_49.tif,2025_Tile_Data/flood_change_mask_tiles/tile_46_49.tif

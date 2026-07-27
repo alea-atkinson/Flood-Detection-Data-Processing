@@ -1,0 +1,9 @@
+uavsar_path,flood_mask_path
+milton/tiles/fp1/uavsar/tile_00007.tif,milton/tiles/fp1/masks/tile_00007.tif
+milton/tiles/fp1/uavsar/tile_00017.tif,milton/tiles/fp1/masks/tile_00017.tif
+milton/tiles/fp4/uavsar/tile_00005.tif,milton/tiles/fp4/masks/tile_00005.tif
+milton/tiles/fp5/uavsar/tile_00040.tif,milton/tiles/fp5/masks/tile_00040.tif
+milton/tiles/fp5/uavsar/tile_00041.tif,milton/tiles/fp5/masks/tile_00041.tif
+milton/tiles/fp5/uavsar/tile_00044.tif,milton/tiles/fp5/masks/tile_00044.tif
+milton/tiles/fp5/uavsar/tile_00045.tif,milton/tiles/fp5/masks/tile_00045.tif
+milton/tiles/fp5/uavsar/tile_00081.tif,milton/tiles/fp5/masks/tile_00081.tif

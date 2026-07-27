@@ -113,64 +113,98 @@ class FloodTileDataset(Dataset):
     def __len__(self) -> int:
         return len(self.rows)
 
-    def __getitem__(self, index: int) -> tuple[torch.Tensor, torch.Tensor]:
+    def __getitem__(self, index: int):
+
         row = self.rows[index]
+
         sar_path = row["uavsar_path"]
         mask_path = row["flood_mask_path"]
 
+        # -----------------------------
+        # Read SAR
+        # -----------------------------
         with rasterio.open(sar_path) as src:
-            sar = src.read(out_dtype="float32")
+            sar = src.read().astype(np.float32)
+
         if sar.shape[0] < 3:
-            raise ValueError(f"Expected at least 3 SAR bands, got {sar.shape[0]} in {sar_path}")
+            raise ValueError(
+                f"Expected at least 3 SAR bands, got {sar.shape[0]} in {sar_path}"
+            )
+
         sar = sar[:3]
 
+        # Valid SAR pixels:
+        # valid unless ALL THREE bands are zero
         sar_valid = ~(sar == 0).all(axis=0)
+
+        # Convert only those invalid pixels to NaN
         sar[:, ~sar_valid] = np.nan
+
+        # -----------------------------
+        # Read mask
+        # -----------------------------
+        with rasterio.open(mask_path) as src:
+            mask = src.read(1)
+
+            # start by assuming everything is valid
+            valid_mask = np.ones(mask.shape, dtype=bool)
+
+            # some padding for no data value
+
+            valid_mask &= (mask < 200)
+
+        # Binary flood mask
+        binary_mask = np.zeros(mask.shape, dtype=np.float32)
+        binary_mask[(mask == 1) & valid_mask] = 1.0
+
+        # Normalize SAR using SAR validity mask
         sar = self._normalize_per_tile(sar, sar_valid)
 
-        with rasterio.open(mask_path) as src:
-            mask = src.read(1, out_dtype="float32")
+        # Final validity mask
+        valid = sar_valid & valid_mask
 
-        mask = (mask > 0).astype(np.float32)[None, :, :]
-
-        return torch.from_numpy(sar), torch.from_numpy(mask)
-
+        return (
+            torch.from_numpy(sar),
+            torch.from_numpy(binary_mask[None]),
+            torch.from_numpy(valid.astype(np.float32)[None]),
+        )
+    
     @staticmethod
     def _normalize_per_tile(
         sar: np.ndarray,
         valid: np.ndarray,
     ) -> np.ndarray:
- 
+
         sar = sar.copy()
- 
+
         for c in range(sar.shape[0]):
- 
+
             band = sar[c]
- 
+
             values = band[valid]
- 
+
             if values.size == 0:
                 band[:] = 0.0
                 sar[c] = band
                 continue
- 
+
             low, high = np.percentile(values, [1.0, 99.0])
- 
+
             values = np.clip(values, low, high)
- 
+
             mean = values.mean()
             std = values.std()
- 
+
             if std < 1e-6:
                 band[:] = 0.0
             else:
                 band[valid] = (values - mean) / std
- 
+
             # Keep invalid pixels at zero
             band[~valid] = 0.0
- 
+
             sar[c] = band
- 
+
         return sar.astype(np.float32)
 
 
@@ -266,21 +300,36 @@ def set_encoder_frozen(model: nn.Module, frozen: bool) -> None:
             param.requires_grad = not frozen
 
 
-def dice_iou_from_logits(logits: torch.Tensor, targets: torch.Tensor, threshold: float = 0.5) -> tuple[float, float]:
+#modified to handle no data valuese
+def segmentation_metrics_from_logits(logits, targets, mask, threshold=0.5):
     probs = torch.sigmoid(logits)
     preds = probs > threshold
     targets_bool = targets > 0.5
 
-    intersection = (preds & targets_bool).sum().float()
+    # apply mask (IMPORTANT)
+    preds = preds & (mask > 0.5) #keep validity with some padding on either side
+    targets_bool = targets_bool & (mask > 0.5)
+
+    true_positive = (preds & targets_bool).sum().float()
+    false_positive = (preds & ~targets_bool).sum().float()
+    false_negative = (~preds & targets_bool).sum().float()
     pred_sum = preds.sum().float()
     target_sum = targets_bool.sum().float()
     union = (preds | targets_bool).sum().float()
 
-    eps = torch.tensor(1e-7, device=logits.device)
-    dice = (2.0 * intersection + eps) / (pred_sum + target_sum + eps)
-    iou = (intersection + eps) / (union + eps)
-    return float(dice.item()), float(iou.item())
+    eps = 1e-7
 
+    dice = (2.0 * true_positive + eps) / (pred_sum + target_sum + eps)
+    iou = (true_positive + eps) / (union + eps)
+    precision = (true_positive + eps) / (true_positive + false_positive + eps)
+    recall = (true_positive + eps) / (true_positive + false_negative + eps)
+
+    return {
+        "dice": float(dice.item()),
+        "iou": float(iou.item()),
+        "precision": float(precision.item()),
+        "recall": float(recall.item()),
+    }
 
 #CUSTOM LOSS FUNCTIONS 
 
@@ -289,23 +338,23 @@ class DiceLoss(nn.Module):
         super().__init__()
         self.smooth = smooth
 
-    def forward(self, logits, targets):
+    def forward(self, logits, targets, mask=None):
 
         probs = torch.sigmoid(logits)
+
+        if mask is not None:
+            probs = probs * mask
+            targets = targets * mask
 
         probs = probs.view(-1)
         targets = targets.view(-1)
 
         intersection = (probs * targets).sum()
+        denom = probs.sum() + targets.sum()
 
-        dice = (
-            2.0 * intersection + self.smooth
-        ) / (
-            probs.sum() + targets.sum() + self.smooth
-        )
+        dice = (2.0 * intersection + self.smooth) / (denom + self.smooth)
 
         return 1 - dice
-
 
 class BCEDiceLoss(nn.Module):
     def __init__(self):
@@ -329,7 +378,7 @@ class FocalLoss(nn.Module):
         self.alpha = alpha
         self.gamma = gamma
 
-    def forward(self, logits, targets):
+    def forward(self, logits, targets, mask=None):
 
         bce = F.binary_cross_entropy_with_logits(
             logits,
@@ -346,21 +395,18 @@ class FocalLoss(nn.Module):
         )
 
         focal_weight = self.alpha * (1 - pt) ** self.gamma
-
         loss = focal_weight * bce
+
+        if mask is not None:
+            loss = loss * mask
+            return loss.sum() / (mask.sum() + 1e-6)
 
         return loss.mean()
     
 #focal and dice combined to handle class imbalance and optimize for segmentation metrics
 
 class FocalDiceLoss(nn.Module):
-    def __init__(
-        self,
-        alpha=0.25,
-        gamma=2.0,
-        dice_weight=1.0,
-        focal_weight=1.0,
-    ):
+    def __init__(self, alpha=0.25, gamma=2.0, dice_weight=1.0, focal_weight=1.0):
         super().__init__()
 
         self.focal = FocalLoss(alpha, gamma)
@@ -369,16 +415,12 @@ class FocalDiceLoss(nn.Module):
         self.dice_weight = dice_weight
         self.focal_weight = focal_weight
 
-    def forward(self, logits, targets):
+    def forward(self, logits, targets, mask):
 
-        focal_loss = self.focal(logits, targets)
+        focal_loss = self.focal(logits, targets, mask)
+        dice_loss = self.dice(logits, targets, mask)
 
-        dice_loss = self.dice(logits, targets)
-
-        return (
-            self.focal_weight * focal_loss
-            + self.dice_weight * dice_loss
-        )
+        return self.focal_weight * focal_loss + self.dice_weight * dice_loss
 
 
 def run_epoch(
@@ -394,24 +436,29 @@ def run_epoch(
     total_loss = 0.0
     total_dice = 0.0
     total_iou = 0.0
+    total_precision = 0.0
+    total_recall = 0.0
     total_batches = 0
 
-    for images, masks in loader:
+    for images, masks, valid in loader:
         images = images.to(device, non_blocking=True)
         masks = masks.to(device, non_blocking=True)
+        valid = valid.to(device, non_blocking=True)
 
         with torch.set_grad_enabled(is_train):
             logits = model(images)
-            loss = loss_fn(logits, masks)
+            loss = loss_fn(logits, masks, valid)
             if is_train:
                 optimizer.zero_grad(set_to_none=True)
                 loss.backward()
                 optimizer.step()
 
-        dice, iou = dice_iou_from_logits(logits.detach(), masks)
+        metrics = segmentation_metrics_from_logits(logits.detach(), masks, valid)
         total_loss += float(loss.item())
-        total_dice += dice
-        total_iou += iou
+        total_dice += metrics["dice"]
+        total_iou += metrics["iou"]
+        total_precision += metrics["precision"]
+        total_recall += metrics["recall"]
         total_batches += 1
 
     if total_batches == 0:
@@ -421,6 +468,8 @@ def run_epoch(
         "loss": total_loss / total_batches,
         "dice": total_dice / total_batches,
         "iou": total_iou / total_batches,
+        "precision": total_precision / total_batches,
+        "recall": total_recall / total_batches,
     }
 
 
@@ -436,30 +485,30 @@ def write_metrics_csv(metrics_path: Path, rows: list[dict[str, float | int]]) ->
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="Fine-tune a SAR-only binary U-Net, optionally from an MAE checkpoint.")
     parser.add_argument("--data-root", type=Path, default=Path("2025_Tile_Data"))
-    parser.add_argument("--train-csv", type=Path, default="training/fine_tune_csvs/train.csv")
-    parser.add_argument("--val-csv", type=Path, default="training/fine_tune_csvs/val.csv")
-    parser.add_argument("--test-csv", type=Path, default="training/fine_tune_csvs/test.csv")
+    parser.add_argument("--train-csv", type=Path, default="training/new_csvs/florence_lopfo/heldout_fp7/train.csv")
+    parser.add_argument("--val-csv", type=Path, default= "training/new_csvs/florence_lopfo/heldout_fp7/val.csv")
+    parser.add_argument("--test-csv", type=Path, default="training/new_csvs/florence_lopfo/heldout_fp7/test.csv")
     parser.add_argument("--epochs", type=int, default=20)
     parser.add_argument("--batch-size", type=int, default=16)
     parser.add_argument("--learning-rate", type=float, default= 9.327106954111342e-05)
-    parser.add_argument("--weight-decay", type=float, default=  6.088353841746043e-06)
+    parser.add_argument("--weight-decay", type=float, default= 6.088353841746043e-06)
     parser.add_argument("--num-workers", type=int, default=2)
     parser.add_argument("--base-channels", type=int, default=32)
     parser.add_argument("--seed", type=int, default=42)
     parser.add_argument("--models-dir", type=Path, default=Path("models"))
     parser.add_argument("--results-dir", type=Path, default=Path("results"))
-    parser.add_argument("--run-name", default="unet_baseline_strict_tuned_fp1")
+    parser.add_argument("--run-name", default="ssl_no_loca_new_florence_lofpo_fp7")
     parser.add_argument("--device", default="cuda" if torch.cuda.is_available() else "cpu")
     parser.add_argument(
-        "--pretrained-checkpoint", type=Path, default="training/pretrain_weights/best_mae.pth",
+        "--pretrained-checkpoint", type=Path, default="training/pretrain_weights/ssim_0.5_4_twenty_scene",
         help="MAE checkpoint (from mae_pretrain_uavsar.py) to initialize encoder/decoder from.",
     )
     parser.add_argument(
-        "--freeze-epochs", type=int, default=5,
+        "--freeze-epochs", type=int, default=0,
         help="Number of initial epochs to keep the pretrained encoder frozen before unfreezing. 0 = never frozen.",
     )
     parser.add_argument(
-        "--encoder-lr-scale", type=float, default=0.01,
+        "--encoder-lr-scale", type=float, default= 0.5,
         help="Multiplier applied to --learning-rate for encoder/bottleneck params (once unfrozen).",
     )
     return parser.parse_args()
@@ -471,6 +520,57 @@ def set_seed(seed: int) -> None:
     torch.manual_seed(seed)
     if torch.cuda.is_available():
         torch.cuda.manual_seed_all(seed)
+
+import matplotlib.pyplot as plt
+
+
+def visualize_prediction(
+    model: nn.Module,
+    dataset: FloodTileDataset,
+    device: torch.device,
+    tile_index: int = 0,
+    threshold: float = 0.5,
+) -> None:
+    """
+    Display a single test tile, ground truth, probability map,
+    and thresholded prediction.
+    """
+
+    model.eval()
+
+    image, mask, valid = dataset[tile_index]
+
+    with torch.no_grad():
+        logits = model(image.unsqueeze(0).to(device))
+        probs = torch.sigmoid(logits)[0, 0].cpu().numpy()
+
+    prediction = (probs > threshold).astype(np.float32)
+
+    # Display SAR as RGB
+    rgb = image[:3].permute(1, 2, 0).numpy()
+    rgb = rgb.copy()
+    rgb -= rgb.min()
+    rgb /= rgb.max() + 1e-8
+
+    fig, axes = plt.subplots(1, 4, figsize=(18, 5))
+
+    axes[0].imshow(rgb)
+    axes[0].set_title("Input SAR")
+
+    axes[1].imshow(mask.squeeze().numpy(), cmap="gray")
+    axes[1].set_title("Ground Truth")
+
+    axes[3].imshow(probs, cmap="viridis", vmin=0, vmax=1)
+    axes[3].set_title("Prediction Probability")
+
+    axes[2].imshow(prediction, cmap="gray")
+    axes[2].set_title("Prediction")
+
+    for ax in axes:
+        ax.axis("off")
+
+    plt.tight_layout()
+    plt.show()
 
 
 def main() -> None:
@@ -599,9 +699,18 @@ def main() -> None:
         "Best checkpoint test metrics: "
         f"loss={test_metrics['loss']:.4f} "
         f"dice={test_metrics['dice']:.4f} "
-        f"iou={test_metrics['iou']:.4f}"
+        f"iou={test_metrics['iou']:.4f} "
+        f"precision={test_metrics['precision']:.4f} "
+        f"recall={test_metrics['recall']:.4f}"
     )
     print(f"Metrics CSV: {metrics_path}")
+
+    visualize_prediction(
+    model,
+    test_dataset,
+    device,
+    tile_index=0,     
+    )
 
 
 if __name__ == "__main__":

@@ -9,10 +9,10 @@ classification. Key differences from that repo:
      uint8 PIL images 
   2. Patches are only eligible for masking if they are mostly *valid* SAR
      pixels (no tiles mostly outside of the flight path)
-  3. Reconstruction loss is computed ONLY on masked + valid pixels (true
-     MAE-style), not the whole image. The original repo computes MSE over
+  3. Reconstruction loss is computed ONLY on masked + valid pixels 
+     , not the whole image. The original repo computes MSE over
      every pixel, which mostly trains an identity/denoising function and
-     weakens the "learn to infer from context" pressure
+     weakens the "learn to infer from context" pressure. Also uses MAE for application to SAR instead of MSE
   4. The model is the original UNet class form the supervised learning task unmodified -- pretraining just
      instantiates it with out_channels=3 (reconstruct the 3 SAR channels)
      instead of out_channels=1 (flood logit).
@@ -276,17 +276,79 @@ class MAEFloodTileDataset(Dataset):
 
 
 # ---------------------------------------------------------------------------
-# Masked reconstruction loss
+# loss functions
 # ---------------------------------------------------------------------------
 
+import torch
+
+
 def masked_mse_loss(
+    pred: torch.Tensor,
+    target: torch.Tensor,
+    loss_mask: torch.Tensor,
+    eps: float = 1e-6,
+) -> torch.Tensor:
+    """
+    Compute masked Mean Squared Error (MSE) loss.
+
+    Args:
+        pred: Predicted tensor of shape (B, C, H, W).
+        target: Ground truth tensor of shape (B, C, H, W).
+        loss_mask: Binary mask of shape (B, 1, H, W),
+                   where 1 indicates pixels to include in the loss.
+        eps: Small constant to avoid division by zero.
+
+    Returns:
+        Scalar masked MSE loss.
+    """
+    # Squared error
+    diff2 = (pred - target) ** 2
+
+    # Apply mask (broadcasts over channel dimension)
+    diff2 = diff2 * loss_mask
+
+    # Normalize by the number of valid pixels × channels
+    denom = loss_mask.sum() * pred.shape[1] + eps
+
+    return diff2.sum() / denom
+
+def masked_mae_loss(
     pred: torch.Tensor, target: torch.Tensor, loss_mask: torch.Tensor, eps: float = 1e-6
 ) -> torch.Tensor:
-    """pred, target: (B, C, H, W). loss_mask: (B, 1, H, W), 1 = include in loss."""
-    diff2 = (pred - target) ** 2
-    diff2 = diff2 * loss_mask  # broadcasts over channel dim
+    """
+    pred, target: (B, C, H, W)
+    loss_mask: (B, 1, H, W), 1 = include in loss.
+    """
+    diff = torch.abs(pred - target)
+
+    # Apply mask (broadcasts over channel dimension)
+    diff = diff * loss_mask
+
+    # Normalize by number of valid pixels and channels
     denom = loss_mask.sum() * pred.shape[1] + eps
-    return diff2.sum() / denom
+
+    return diff.sum() / denom
+
+from pytorch_msssim import ssim
+
+def masked_mae_ssim_loss(
+    pred,
+    target,
+    loss_mask,
+    alpha=0.8,
+):
+    # MAE only on masked pixels
+    mae = masked_mae_loss(pred, target, loss_mask)
+
+    # SSIM over the reconstructed image
+    ssim_loss = 1.0 - ssim(
+        pred,
+        target,
+        data_range=1.0,
+        size_average=True,
+    )
+
+    return alpha * mae + (1 - alpha) * ssim_loss
 
 
 # ---------------------------------------------------------------------------
@@ -418,7 +480,12 @@ def train(args: argparse.Namespace) -> None:
 
             optimizer.zero_grad()
             pred = model(masked_sar)
-            loss = masked_mse_loss(pred, target_sar, loss_mask)
+            if(args.loss_fn == "MSE"):
+                loss = masked_mse_loss(pred, target_sar, loss_mask)
+            elif(args.loss_fn == "MAE"):
+                loss = masked_mae_loss(pred, target_sar, loss_mask)
+            elif(args.loss_fn == "ssim"):
+                loss = masked_mae_ssim_loss(pred, target_sar, loss_mask)
             loss.backward()
             optimizer.step()
 
@@ -437,7 +504,7 @@ def train(args: argparse.Namespace) -> None:
                 if loss_mask.sum() < 1:
                     continue
                 pred = model(masked_sar)
-                loss = masked_mse_loss(pred, target_sar, loss_mask)
+                loss = masked_mae_loss(pred, target_sar, loss_mask)
                 val_loss_sum += loss.item()
                 val_batches += 1
 
@@ -448,32 +515,35 @@ def train(args: argparse.Namespace) -> None:
             best_val_loss = val_loss
             torch.save(
                 {"model_state_dict": model.state_dict(), "epoch": epoch, "val_loss": val_loss},
-                out_dir / "best_mae.pth",
+                out_dir / args.run_name,
             )
         if epoch % 5 == 0:
             visualize_reconstruction(
-                masked_sar[0],
-                target_sar[0],
-                pred[0],
-                loss_mask[0],
+                masked_sar[args.visualization_tile],
+                target_sar[args.visualization_tile],
+                pred[args.visualization_tile],
+                loss_mask[args.visualization_tile],
                 f"training/visuals/reconstruction_epoch_{epoch:03d}.png",
             )
 
-    print(f"Done. Best val loss: {best_val_loss:.5f}. Checkpoint: {out_dir / 'best_mae.pth'}")
+    print(f"Done. Best val loss: {best_val_loss:.5f}. Checkpoint: {out_dir}/{args.run_name}")
 
 
 def build_arg_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(description="MAE-style pretraining for UAVSAR U-Net")
-    parser.add_argument("--train_csv", type=Path, default="training/pretrain_csvs/train.csv")
-    parser.add_argument("--val_csv", type=Path, default="training/pretrain_csvs/val.csv")
+    parser.add_argument("--train_csv", type=Path, default="training/pretrain_csvs_new/train.csv")
+    parser.add_argument("--val_csv", type=Path, default="training/pretrain_csvs_new/val.csv")
     parser.add_argument("--out_dir", type=Path, default="training/pretrain_weights")
-    parser.add_argument("--patch_size", type=int, default=16)
+    parser.add_argument("--patch_size", type=int, default=4)
     parser.add_argument("--mask_ratio", type=float, default=0.5)
     parser.add_argument("--base_channels", type=int, default=32)
     parser.add_argument("--batch_size", type=int, default=16)
-    parser.add_argument("--epochs", type=int, default=80)
+    parser.add_argument("--epochs", type=int, default=20)
+    parser.add_argument("--loss_fn", type=str, default="ssim")
     parser.add_argument("--lr", type=float, default=1e-4)
     parser.add_argument("--num_workers", type=int, default=2)
+    parser.add_argument("--run_name", type=str, default="ssim_0.5_4_twenty_scene")
+    parser.add_argument("--visualization_tile", type=int, default=3)
     return parser
 
 
