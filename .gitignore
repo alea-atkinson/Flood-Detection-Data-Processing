@@ -4,3 +4,17 @@
 
 __pycache__/
 *.pyc
+# Generated experiment outputs
+logs/
+models/
+results/
+seed_replication/logs/
+seed_replication/models/
+seed_replication/raw_results/
+domain_balancing/logs/
+domain_balancing/models/
+domain_balancing/raw_results/
+
+# Generated repo snapshots
+project_config/repo_snapshot_output.txt
+
