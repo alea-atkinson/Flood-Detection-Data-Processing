@@ -120,7 +120,8 @@ def run_one(
     val_csv = heldout_dir / "validation.csv"
     test_csv = heldout_dir / "test.csv"
 
-    run_name = f"domain_balance_{strategy}_{fold}_seed{args.seed}"
+    run_prefix = "smoke_domain_balance" if args.mode == "smoke" else "domain_balance"
+    run_name = f"{run_prefix}_{strategy}_{fold}_seed{args.seed}"
 
     test_metrics = RESULTS_DIR / f"{run_name}_test_metrics.csv"
     metrics = RESULTS_DIR / f"{run_name}_metrics.csv"
