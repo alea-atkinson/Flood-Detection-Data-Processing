@@ -1,0 +1,24 @@
+UAVSAR Pretraining Reconstruction Evaluation
+===========================================
+Checkpoint: training/pretrain_weights/best_mae.pth
+Validation CSV: training/pretrain_csvs/val.csv
+Tiles evaluated: 450
+Patch size: 16
+Mask ratio among eligible patches: 0.5
+Minimum valid fraction per eligible patch: 0.9
+Deterministic mask seed: 42
+
+Overall masked-region metrics
+-----------------------------
+Model MSE:       0.372736
+Model MAE:       0.412319
+Zero-fill MSE:   0.982314
+Zero-fill MAE:   0.802600
+Mean-fill MSE:   0.990953
+Mean-fill MAE:   0.806696
+
+Mean effective mask fraction of valid pixels: 0.4942
+
+Per-tile metrics: training/pretrain_evaluation/reconstruction_metrics.csv
+Per-scene metrics: training/pretrain_evaluation/per_scene_metrics.csv
+Examples: training/pretrain_evaluation/examples
