@@ -1,0 +1,149 @@
+===== Git =====
+domain-balancing
+?? domain_balancing/scripts/audit.py
+?? domain_balancing/summaries/lofo_training_distribution_audit_summary.txt
+?? domain_balancing/tables/lofo_training_distribution_by_flood_bin.csv
+?? domain_balancing/tables/lofo_training_distribution_by_source_fp.csv
+?? domain_balancing/tables/lofo_training_distribution_by_source_fp_and_flood_bin.csv
+?? domain_balancing/tables/lofo_training_per_tile_audit.csv
+?? project_config/
+* 13ab0bb (HEAD -> domain-balancing, origin/domain-balancing) Set up domain balancing experiment folder
+* 20d0076 (origin/ssl-lofpo, ssl-lofpo) Add LOFPO threshold selection result summaries
+* ed339ab Add LOFPO experiment scripts and global metric outputs
+* 283be4c Add seed replication results and report assets
+* 29d2ea5 fold difficulty figures
+* 418aa1a Add LOFPO fold difficulty analysis
+* c7c7159 Add final LOFPO SSL result tables and figures
+* 64409dc Add final report result tables
+* ff5cc47 Add SSL LOFPO threshold-selected results
+* 456e068 (origin/SSL, SSL) add SSL reconstruction evaluation pipeline and validation metrics
+* 23666e2 fix pretraining and fine tuning scripts. Add csv splits for both
+* a8f7943 add the rest of the tiles and the pretrain/fine tune scripts
+*   9f610a4 (origin/main, origin/HEAD) Merge branch 'main' of https://github.com/alea-atkinson/Flood-Detection-Data-Processing
+|\  
+| * 23cb191 (main) add 4 flood mask tiles
+* | 257b596 new tiles
+|/  
+
+===== Top-level repo folders =====
+./2025_Tile_Data
+./20m_files
+./.agents
+./domain_balancing
+./experiments
+./filtered_files
+./logs
+./milton
+./models
+./project_config
+./raw_files
+./results
+./scripts
+./seed_replication
+./tiles
+./training
+
+===== Important experiment folders =====
+domain_balancing
+domain_balancing/figures
+domain_balancing/logs
+domain_balancing/models
+domain_balancing/raw_results
+domain_balancing/scripts
+domain_balancing/summaries
+domain_balancing/tables
+project_config
+seed_replication
+seed_replication/figures
+seed_replication/logs
+seed_replication/models
+seed_replication/raw_results
+seed_replication/scripts
+seed_replication/slurm
+seed_replication/summaries
+seed_replication/tables
+training
+training/fine_tune_csvs
+training/lofo_csvs
+training/lofo_csvs/heldout_fp1
+training/lofo_csvs/heldout_fp2
+training/lofo_csvs/heldout_fp3
+training/lofo_csvs/heldout_fp4
+training/lofo_csvs/heldout_fp5
+training/lofo_csvs/heldout_fp6
+training/lofo_csvs/heldout_fp7
+training/pretrain_csvs
+training/pretrain_evaluation
+training/pretrain_evaluation/examples
+training/pretrain_weights
+training/visuals
+
+===== LOFPO split CSVs =====
+training/lofo_csvs/heldout_fp1/test.csv
+training/lofo_csvs/heldout_fp1/train.csv
+training/lofo_csvs/heldout_fp1/validation.csv
+training/lofo_csvs/heldout_fp2/test.csv
+training/lofo_csvs/heldout_fp2/train.csv
+training/lofo_csvs/heldout_fp2/validation.csv
+training/lofo_csvs/heldout_fp3/test.csv
+training/lofo_csvs/heldout_fp3/train.csv
+training/lofo_csvs/heldout_fp3/validation.csv
+training/lofo_csvs/heldout_fp4/test.csv
+training/lofo_csvs/heldout_fp4/train.csv
+training/lofo_csvs/heldout_fp4/validation.csv
+training/lofo_csvs/heldout_fp5/test.csv
+training/lofo_csvs/heldout_fp5/train.csv
+training/lofo_csvs/heldout_fp5/validation.csv
+training/lofo_csvs/heldout_fp6/test.csv
+training/lofo_csvs/heldout_fp6/train.csv
+training/lofo_csvs/heldout_fp6/validation.csv
+training/lofo_csvs/heldout_fp7/test.csv
+training/lofo_csvs/heldout_fp7/train.csv
+training/lofo_csvs/heldout_fp7/validation.csv
+
+===== LOFPO split row counts =====
+heldout_fp1
+  train.csv: 741 rows, columns=['uavsar_path', 'flood_mask_path']
+  validation.csv: 188 rows, columns=['uavsar_path', 'flood_mask_path']
+  test.csv: 137 rows, columns=['uavsar_path', 'flood_mask_path']
+heldout_fp2
+  train.csv: 720 rows, columns=['uavsar_path', 'flood_mask_path']
+  validation.csv: 190 rows, columns=['uavsar_path', 'flood_mask_path']
+  test.csv: 138 rows, columns=['uavsar_path', 'flood_mask_path']
+heldout_fp3
+  train.csv: 648 rows, columns=['uavsar_path', 'flood_mask_path']
+  validation.csv: 167 rows, columns=['uavsar_path', 'flood_mask_path']
+  test.csv: 164 rows, columns=['uavsar_path', 'flood_mask_path']
+heldout_fp4
+  train.csv: 576 rows, columns=['uavsar_path', 'flood_mask_path']
+  validation.csv: 149 rows, columns=['uavsar_path', 'flood_mask_path']
+  test.csv: 181 rows, columns=['uavsar_path', 'flood_mask_path']
+heldout_fp5
+  train.csv: 665 rows, columns=['uavsar_path', 'flood_mask_path']
+  validation.csv: 157 rows, columns=['uavsar_path', 'flood_mask_path']
+  test.csv: 160 rows, columns=['uavsar_path', 'flood_mask_path']
+heldout_fp6
+  train.csv: 600 rows, columns=['uavsar_path', 'flood_mask_path']
+  validation.csv: 152 rows, columns=['uavsar_path', 'flood_mask_path']
+  test.csv: 170 rows, columns=['uavsar_path', 'flood_mask_path']
+heldout_fp7
+  train.csv: 765 rows, columns=['uavsar_path', 'flood_mask_path']
+  validation.csv: 184 rows, columns=['uavsar_path', 'flood_mask_path']
+  test.csv: 117 rows, columns=['uavsar_path', 'flood_mask_path']
+
+===== Sample LOFPO paths =====
+                                           uavsar_path                                            flood_mask_path
+2025_Tile_Data/Only_PNG_Data/fp7/UAVSAR/tile_12_57.tif 2025_Tile_Data/Only_PNG_Data/fp7/flood_mask/tile_12_57.tif
+2025_Tile_Data/Only_PNG_Data/fp7/UAVSAR/tile_13_56.tif 2025_Tile_Data/Only_PNG_Data/fp7/flood_mask/tile_13_56.tif
+2025_Tile_Data/Only_PNG_Data/fp7/UAVSAR/tile_13_58.tif 2025_Tile_Data/Only_PNG_Data/fp7/flood_mask/tile_13_58.tif
+
+===== File extension summary in LOFPO CSVs =====
+.tif: 13938
+
+===== Ignored large-output folders =====
+domain_balancing/logs: 0 files
+domain_balancing/models: 0 files
+domain_balancing/raw_results: 0 files
+seed_replication/logs: 42 files
+seed_replication/models: 42 files
+seed_replication/raw_results: 84 files

@@ -1,0 +1,52 @@
+repo:
+  root: /mnt/linuxlab/home/reuuzheng/Flood-Detection-Data-Processing
+  workspace_root: /mnt/linuxlab/home/reuuzheng
+  active_branch: domain-balancing
+  previous_stable_ssl_branch: ssl-lofpo
+
+data:
+  tile_subset_root: 2025_Tile_Data/Only_PNG_Data
+  tile_subset_note: "IEEE-valid tile subset originally associated with PNG-filtered train/test splits; does not guarantee current files are PNG."
+  lofpo_csv_root: training/lofo_csvs
+  lofpo_folds:
+    - heldout_fp1
+    - heldout_fp2
+    - heldout_fp3
+    - heldout_fp4
+    - heldout_fp5
+    - heldout_fp6
+    - heldout_fp7
+  split_files:
+    train: train.csv
+    validation: validation.csv
+    test: test.csv
+  required_csv_columns:
+    - uavsar_path
+    - flood_mask_path
+
+file_reading:
+  raster_extensions:
+    - .tif
+    - .tiff
+  raster_reader: rasterio
+  image_extensions:
+    - .png
+    - .jpg
+    - .jpeg
+  image_reader: PIL
+  florence_mask_flooded_rule: "Treat flooded pixels as mask > 0 unless a dataset-specific nodata rule is explicitly verified."
+  valid_sar_pixel_rule: "A SAR pixel is valid when at least one of the first 3 SAR channels is nonzero."
+
+domain_balancing:
+  folders:
+    scripts: domain_balancing/scripts
+    tables: domain_balancing/tables
+    figures: domain_balancing/figures
+    summaries: domain_balancing/summaries
+    logs: domain_balancing/logs
+    models: domain_balancing/models
+    raw_results: domain_balancing/raw_results
+  git_ignored_outputs:
+    - domain_balancing/logs/
+    - domain_balancing/models/
+    - domain_balancing/raw_results/
