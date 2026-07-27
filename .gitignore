@@ -14,7 +14,7 @@ seed_replication/raw_results/
 domain_balancing/logs/
 domain_balancing/models/
 domain_balancing/raw_results/
+training/pretrain_weights/
 
 # Generated repo snapshots
 project_config/repo_snapshot_output.txt
-
