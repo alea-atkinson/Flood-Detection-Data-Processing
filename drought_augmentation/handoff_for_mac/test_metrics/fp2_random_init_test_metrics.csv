@@ -1,0 +1,2 @@
+run_name,train_csv,val_csv,test_csv,pretrained_weights,best_epoch,best_val_loss,test_loss,test_dice,test_iou,test_precision,test_recall
+fp2_random_init,training/fine_tune_csvs/no_overlap_converted/held_out_fp2_train.csv,training/fine_tune_csvs/no_overlap_converted/held_out_fp2_val.csv,training/fine_tune_csvs/no_overlap_converted/held_out_fp2_test.csv,,20,0.4117816040913264,0.4538363350762261,0.7254235507431349,0.5691487169452238,0.7618967306810835,0.6922828933291343

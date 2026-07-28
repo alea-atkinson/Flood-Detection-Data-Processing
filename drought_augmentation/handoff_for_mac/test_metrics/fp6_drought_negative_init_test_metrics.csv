@@ -1,0 +1,2 @@
+run_name,train_csv,val_csv,test_csv,pretrained_weights,best_epoch,best_val_loss,test_loss,test_dice,test_iou,test_precision,test_recall
+fp6_drought_negative_init,training/fine_tune_csvs/no_overlap_converted/held_out_fp6_train.csv,training/fine_tune_csvs/no_overlap_converted/held_out_fp6_val.csv,training/fine_tune_csvs/no_overlap_converted/held_out_fp6_test.csv,drought_augmentation/models/drought_negative_pretraining_best.pt,19,0.4896259307861328,0.5401791686361487,0.5972132284412857,0.4257334332984212,0.7898018447267849,0.48013506669450506
