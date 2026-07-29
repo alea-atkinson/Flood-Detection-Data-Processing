@@ -23,3 +23,4 @@ project_config/repo_snapshot_output.txt
 drought_augmentation/logs/
 drought_augmentation/raw_results/
 drought_augmentation/generated_masks/
+.venv-mac/
